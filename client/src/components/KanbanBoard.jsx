@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, FileText, Star, Trash2 } from "lucide-react";
 import api from "../lib/api";
 
 const COLUMNS = [
-  { id: "todo", label: "To Do", color: "#6b7280", dot: "bg-gray-500" },
-  { id: "in_progress", label: "In Progress", color: "#3b82f6", dot: "bg-blue-500" },
-  { id: "done", label: "Done", color: "#22c55e", dot: "bg-green-500" },
+  { id: "todo",        label: "To Do",       dot: "#6b7280", bg: "rgba(107,114,128,0.08)" },
+  { id: "in_progress", label: "In Progress",  dot: "#3b82f6", bg: "rgba(59,130,246,0.08)"  },
+  { id: "done",        label: "Done",         dot: "#22c55e", bg: "rgba(34,197,94,0.08)"   },
 ];
 
 function KanbanCard({ page, onSelectPage, onDelete, onStar, onDragStart }) {
@@ -14,43 +14,47 @@ function KanbanCard({ page, onSelectPage, onDelete, onStar, onDragStart }) {
       draggable
       onDragStart={(e) => onDragStart(e, page)}
       onClick={() => onSelectPage(page)}
-      className="bg-[#2a2a2a] border border-white/5 rounded-lg p-3 group hover:border-white/10 transition-all cursor-pointer select-none"
+      className="rounded-xl border p-3.5 group cursor-pointer select-none transition-all duration-150"
+      style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-hover)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "translateY(0)"; }}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-white text-sm font-medium truncate">
-            {page.title || "Untitled"}
-          </p>
-          {page.content && (
-            <p className="text-gray-600 text-xs mt-1 line-clamp-2">
-              {page.content.replace(/<[^>]+>/g, "").trim().slice(0, 100)}
-              {page.content.replace(/<[^>]+>/g, "").trim().length > 100 ? "..." : ""}
-            </p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <p className="text-sm font-medium text-white leading-snug flex-1 min-w-0 truncate">
+          {page.title || "Untitled"}
+        </p>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onStar(page.id); }}
-            className={`p-0.5 rounded ${page.is_starred ? "text-yellow-400" : "text-gray-600 hover:text-gray-400"}`}
+            className="p-1 rounded-md transition-colors"
+            style={{ color: page.is_starred ? "var(--accent-yellow)" : "var(--text-muted)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
           >
             <Star size={11} fill="none" strokeWidth={2} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(e, page.id); }}
-            className="p-0.5 rounded text-gray-600 hover:text-red-400"
+            className="p-1 rounded-md transition-colors"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; e.currentTarget.style.color = "var(--accent-red)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
           >
             <Trash2 size={11} />
           </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 mt-2.5 text-gray-600 text-xs">
-        <FileText size={10} />
-        <span>
-          {new Date(page.updated_at).toLocaleDateString("en-US", {
-            month: "short", day: "numeric",
-          })}
+      {page.content && (
+        <p className="text-xs mt-1.5 line-clamp-2 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+          {page.content.replace(/<[^>]+>/g, "").trim().slice(0, 100)}
+        </p>
+      )}
+
+      <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t" style={{ borderColor: "var(--border)" }}>
+        <FileText size={10} style={{ color: "var(--text-muted)" }} />
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {new Date(page.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
         </span>
       </div>
     </div>
@@ -63,17 +67,20 @@ function KanbanColumn({ column, pages, onSelectPage, onDelete, onStar, onAddPage
   return (
     <div className="flex flex-col w-72 shrink-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 px-1">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${column.dot}`} />
-          <span className="text-gray-300 text-sm font-medium">{column.label}</span>
-          <span className="text-gray-600 text-xs bg-white/5 rounded px-1.5 py-0.5">
+          <div className="w-2 h-2 rounded-full" style={{ background: column.dot }} />
+          <span className="text-sm font-medium text-white">{column.label}</span>
+          <span className="text-xs px-1.5 py-0.5 rounded-md font-mono" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}>
             {pages.length}
           </span>
         </div>
         <button
           onClick={() => onAddPage(column.id)}
-          className="text-gray-600 hover:text-white p-1 rounded hover:bg-white/5 transition-colors"
+          className="p-1 rounded-md transition-all duration-150"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
         >
           <Plus size={14} />
         </button>
@@ -84,9 +91,11 @@ function KanbanColumn({ column, pages, onSelectPage, onDelete, onStar, onAddPage
         onDragOver={(e) => { e.preventDefault(); setIsOver(true); onDragOver(e); }}
         onDragLeave={() => setIsOver(false)}
         onDrop={(e) => { setIsOver(false); onDrop(e, column.id); }}
-        className={`flex flex-col gap-2 flex-1 min-h-[200px] rounded-xl p-2 transition-colors ${
-          isOver ? "bg-white/5 border border-dashed border-white/10" : "border border-transparent"
-        }`}
+        className="flex flex-col gap-2 flex-1 min-h-48 rounded-xl p-2 transition-all duration-150 border"
+        style={{
+          background: isOver ? column.bg : "transparent",
+          borderColor: isOver ? column.dot + "33" : "transparent",
+        }}
       >
         {pages.map((page) => (
           <KanbanCard
@@ -100,21 +109,23 @@ function KanbanColumn({ column, pages, onSelectPage, onDelete, onStar, onAddPage
         ))}
 
         {pages.length === 0 && !isOver && (
-          <div
+          <button
             onClick={() => onAddPage(column.id)}
-            className="border border-dashed border-white/5 rounded-lg p-6 text-center cursor-pointer hover:border-white/10 transition-colors group"
+            className="flex items-center justify-center gap-2 rounded-xl border border-dashed p-6 transition-all duration-150 text-xs"
+            style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-hover)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
           >
-            <p className="text-gray-700 text-xs group-hover:text-gray-500">
-              + Add a page
-            </p>
-          </div>
+            <Plus size={12} />
+            Add a page
+          </button>
         )}
       </div>
     </div>
   );
 }
 
-export default function KanbanBoard({ pages, setPages, onSelectPage, workspaceId ,onDelete ,onStar }) {
+export default function KanbanBoard({ pages, setPages, onSelectPage, workspaceId, onDelete: onDeleteProp, onStar: onStarProp }) {
   const [draggedPage, setDraggedPage] = useState(null);
 
   const handleDragStart = (e, page) => {
@@ -131,98 +142,62 @@ export default function KanbanBoard({ pages, setPages, onSelectPage, workspaceId
   const handleDrop = async (e, targetColumnId) => {
     e.preventDefault();
     if (!draggedPage) return;
-
     const currentStatus = draggedPage.status || "todo";
-    if (currentStatus === targetColumnId) {
-      setDraggedPage(null);
-      return;
-    }
+    if (currentStatus === targetColumnId) { setDraggedPage(null); return; }
 
-    // Optimistically update UI immediately
-    setPages((prev) =>
-      prev.map((p) =>
-        p.id === draggedPage.id ? { ...p, status: targetColumnId } : p
-      )
-    );
-
-    // Persist to server
+    setPages((prev) => prev.map((p) => p.id === draggedPage.id ? { ...p, status: targetColumnId } : p));
     try {
       await api.put(`/pages/status/${draggedPage.id}`, { status: targetColumnId });
     } catch (err) {
-      console.error("Failed to update status:", err);
-      // Revert on error
-      setPages((prev) =>
-        prev.map((p) =>
-          p.id === draggedPage.id ? { ...p, status: currentStatus } : p
-        )
-      );
+      console.error(err);
+      setPages((prev) => prev.map((p) => p.id === draggedPage.id ? { ...p, status: currentStatus } : p));
     }
-
     setDraggedPage(null);
   };
 
   const handleAddPage = async (status) => {
     try {
-      const res = await api.post("/pages", {
-        title: "Untitled",
-        content: "",
-        workspace_id: workspaceId,
-        status: status,
-      });
-      // Add to kanban with correct status
-      const newPage = { ...res.data, status: status };
+      const res = await api.post("/pages", { title: "Untitled", content: "", workspace_id: workspaceId, status });
+      const newPage = { ...res.data, status };
       setPages((prev) => [...prev, newPage]);
       onSelectPage(newPage);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-const handleDelete = async (e, id) => {
-  e.stopPropagation();
-  try {
-    await api.delete(`/pages/${id}`);
-    setPages((prev) => prev.filter((p) => p.id !== id));
-    if (onDelete) onDelete(); // ← triggers sidebar refresh
-  } catch (err) {
-    console.error(err);
-  }
-};
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await api.delete(`/pages/${id}`);
+      setPages((prev) => prev.filter((p) => p.id !== id));
+      if (onDeleteProp) onDeleteProp();
+    } catch (err) { console.error(err); }
+  };
 
- const handleStar = async (id) => {
-  try {
-    const res = await api.put(`/pages/star/${id}`);
-    setPages((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, is_starred: res.data.is_starred } : p))
-    );
-    if (onStar) onStar(); 
-  } catch (err) {
-    console.error(err);
-  }
-};
+  const handleStar = async (id) => {
+    try {
+      const res = await api.put(`/pages/star/${id}`);
+      setPages((prev) => prev.map((p) => p.id === id ? { ...p, is_starred: res.data.is_starred } : p));
+      if (onStarProp) onStarProp();
+    } catch (err) { console.error(err); }
+  };
 
   return (
-    <div className="flex-1 overflow-x-auto overflow-y-auto bg-[#191919]">
-      <div className="flex gap-6 p-8 min-h-full items-start">
-        {COLUMNS.map((column) => {
-          const columnPages = pages.filter(
-            (p) => (p.status || "todo") === column.id
-          );
-          return (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              pages={columnPages}
-              onSelectPage={onSelectPage}
-              onDelete={handleDelete}
-              onStar={handleStar}
-              onAddPage={handleAddPage}
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-            />
-          );
-        })}
+    <div className="flex-1 overflow-x-auto overflow-y-auto" style={{ background: "var(--bg-base)" }}>
+      <div className="flex gap-5 p-8 min-h-full items-start">
+        {COLUMNS.map((column) => (
+          <KanbanColumn
+            key={column.id}
+            column={column}
+            pages={pages.filter((p) => (p.status || "todo") === column.id)}
+            onSelectPage={onSelectPage}
+            onDelete={handleDelete}
+            onStar={handleStar}
+            onAddPage={handleAddPage}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          />
+        ))}
       </div>
     </div>
   );

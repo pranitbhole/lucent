@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, FileText, X, Clock } from "lucide-react";
+import { Search, FileText, X, Clock, ArrowRight } from "lucide-react";
 import api from "../lib/api";
 
 function highlight(text, query) {
@@ -8,7 +8,7 @@ function highlight(text, query) {
   const parts = text.split(regex);
   return parts.map((part, i) =>
     regex.test(part) ? (
-      <mark key={i} className="bg-yellow-400/30 text-yellow-200 rounded px-0.5">
+      <mark key={i} style={{ background: "rgba(59,130,246,0.25)", color: "#93c5fd", borderRadius: "3px", padding: "0 2px" }}>
         {part}
       </mark>
     ) : part
@@ -30,6 +30,7 @@ export default function SearchModal({ open, onClose, onSelectPage, workspaceId }
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [recent, setRecent] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function SearchModal({ open, onClose, onSelectPage, workspaceId }
       setTimeout(() => inputRef.current?.focus(), 50);
       const stored = JSON.parse(localStorage.getItem("recentPages") || "[]");
       setRecent(stored);
+      setActiveIndex(0);
     } else {
       setQuery("");
       setResults([]);
@@ -50,6 +52,7 @@ export default function SearchModal({ open, onClose, onSelectPage, workspaceId }
       try {
         const res = await api.get(`/pages/search/query?q=${encodeURIComponent(query)}&workspace_id=${workspaceId}`);
         setResults(res.data);
+        setActiveIndex(0);
       } catch (err) {
         console.error(err);
       } finally {
@@ -59,8 +62,9 @@ export default function SearchModal({ open, onClose, onSelectPage, workspaceId }
     return () => clearTimeout(timer);
   }, [query, workspaceId]);
 
+  const displayItems = query ? results : recent;
+
   const handleSelect = (page) => {
-    // Save to recent
     const stored = JSON.parse(localStorage.getItem("recentPages") || "[]");
     const updated = [page, ...stored.filter((p) => p.id !== page.id)].slice(0, 5);
     localStorage.setItem("recentPages", JSON.stringify(updated));
@@ -68,106 +72,106 @@ export default function SearchModal({ open, onClose, onSelectPage, workspaceId }
     onClose();
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, displayItems.length - 1)); }
+    if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)); }
+    if (e.key === "Enter" && displayItems[activeIndex]) handleSelect(displayItems[activeIndex]);
+    if (e.key === "Escape") onClose();
+  };
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-xl bg-[#242424] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-        {/* Search Input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-          <Search size={16} className="text-gray-500 shrink-0" />
+      <div className="relative w-full max-w-lg rounded-2xl border overflow-hidden shadow-2xl fade-up"
+        style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}>
+
+        {/* Input */}
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: "var(--border)" }}>
+          <Search size={15} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Search pages..."
-            className="flex-1 bg-transparent text-white text-sm outline-none placeholder-gray-600"
+            className="flex-1 bg-transparent text-sm text-white outline-none placeholder-[#444]"
           />
-          {query && (
-            <button onClick={() => setQuery("")} className="text-gray-500 hover:text-white">
-              <X size={14} />
+          {query ? (
+            <button onClick={() => setQuery("")} className="transition-colors" style={{ color: "var(--text-muted)" }}>
+              <X size={13} />
             </button>
+          ) : (
+            <kbd className="text-xs px-1.5 py-0.5 rounded border font-mono" style={{ color: "var(--text-muted)", borderColor: "var(--border)", background: "var(--bg-elevated)" }}>Esc</kbd>
           )}
-          <kbd className="text-gray-600 text-xs border border-gray-700 rounded px-1.5 py-0.5">Esc</kbd>
         </div>
 
         {/* Results */}
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-5 h-5 border-2 border-gray-700 border-t-gray-400 rounded-full animate-spin" />
+            <div className="flex items-center justify-center py-10">
+              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--text-secondary)" }} />
             </div>
-          ) : query && results.length === 0 ? (
+          ) : displayItems.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-gray-500 text-sm">No results for "{query}"</p>
-            </div>
-          ) : query && results.length > 0 ? (
-            <div className="p-2">
-              <p className="text-gray-600 text-xs px-3 py-1.5 uppercase tracking-wider">
-                {results.length} result{results.length > 1 ? "s" : ""}
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {query ? `No results for "${query}"` : "Type to search"}
               </p>
-              {results.map((page) => (
+            </div>
+          ) : (
+            <div className="p-1.5">
+              {!query && recent.length > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-2">
+                  <Clock size={11} style={{ color: "var(--text-muted)" }} />
+                  <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Recent</span>
+                </div>
+              )}
+              {query && results.length > 0 && (
+                <div className="px-3 py-2">
+                  <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                    {results.length} result{results.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+              {displayItems.map((page, i) => (
                 <button
                   key={page.id}
                   onClick={() => handleSelect(page)}
-                  className="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors text-left group"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-100 group"
+                  style={{ background: i === activeIndex ? "var(--bg-hover)" : "transparent" }}
+                  onMouseEnter={() => setActiveIndex(i)}
                 >
-                  <div className="w-7 h-7 rounded-md bg-white/5 flex items-center justify-center shrink-0 mt-0.5">
-                    <FileText size={13} className="text-gray-500" />
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center border shrink-0" style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}>
+                    <FileText size={12} style={{ color: "var(--text-muted)" }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-medium truncate">
-                      {highlight(page.title || "Untitled", query)}
+                    <p className="text-sm text-white font-medium truncate">
+                      {query ? highlight(page.title || "Untitled", query) : (page.title || "Untitled")}
                     </p>
-                    {page.content && (
-                      <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">
+                    {query && page.content && (
+                      <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
                         {highlight(getSnippet(page.content, query), query)}
                       </p>
                     )}
                   </div>
-                  <span className="text-gray-700 text-xs shrink-0 mt-0.5">
-                    {new Date(page.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
+                  <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: "var(--text-muted)" }} />
                 </button>
               ))}
-            </div>
-          ) : recent.length > 0 ? (
-            <div className="p-2">
-              <p className="text-gray-600 text-xs px-3 py-1.5 uppercase tracking-wider flex items-center gap-1.5">
-                <Clock size={10} /> Recent
-              </p>
-              {recent.map((page) => (
-                <button
-                  key={page.id}
-                  onClick={() => handleSelect(page)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-left"
-                >
-                  <div className="w-7 h-7 rounded-md bg-white/5 flex items-center justify-center shrink-0">
-                    <FileText size={13} className="text-gray-500" />
-                  </div>
-                  <span className="text-gray-300 text-sm truncate">{page.title || "Untitled"}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-gray-600 text-sm">Type to search across all pages</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/5 px-4 py-2 flex items-center gap-4 text-gray-700 text-xs">
-          <span className="flex items-center gap-1"><kbd className="border border-gray-700 rounded px-1">↵</kbd> Select</span>
-          <span className="flex items-center gap-1"><kbd className="border border-gray-700 rounded px-1">Esc</kbd> Close</span>
+        <div className="flex items-center gap-4 px-4 py-2.5 border-t" style={{ borderColor: "var(--border)", background: "var(--bg-elevated)" }}>
+          {[["↑↓", "Navigate"], ["↵", "Open"], ["Esc", "Close"]].map(([key, label]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <kbd className="text-xs px-1.5 py-0.5 rounded border font-mono" style={{ color: "var(--text-muted)", borderColor: "var(--border)", background: "var(--bg-surface)" }}>{key}</kbd>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

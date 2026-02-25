@@ -6,6 +6,7 @@ import ExportMenu from "../components/ExportMenu";
 import CoverImage from "../components/CoverImage";
 import SearchModal from "../components/SearchModal";
 import KanbanBoard from "../components/KanbanBoard";
+import { Menu, FileText, Columns } from "lucide-react";
 import api from "../lib/api";
 
 function useDebounce(value, delay) {
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
   const [view, setView] = useState("editor");
   const [kanbanPages, setKanbanPages] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const debouncedTitle = useDebounce(title, 800);
   const debouncedContent = useDebounce(content, 800);
@@ -62,7 +64,10 @@ export default function Dashboard() {
         e.preventDefault();
         setSearchOpen(true);
       }
-      if (e.key === "Escape") setSearchOpen(false);
+      if (e.key === "Escape") {
+        setSearchOpen(false);
+        setSidebarOpen(false);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -74,6 +79,7 @@ export default function Dashboard() {
     setContent(page?.content || "");
     setCoverImage(page?.cover_image || null);
     setSavedAt(page?.updated_at || null);
+    setSidebarOpen(false);
   };
 
   const savePage = useCallback(async () => {
@@ -99,64 +105,107 @@ export default function Dashboard() {
   }, [debouncedTitle, debouncedContent, coverImage]);
 
   return (
-    <div className="flex h-screen bg-[#191919]">
-      <Sidebar
-        activePage={activePage}
-        onSelectPage={handleSelectPage}
-        refreshTrigger={refreshTrigger}
-        onWorkspaceChange={(id) => setActiveWorkspaceId(id)}
-        onSearchOpen={() => setSearchOpen(true)}
-        onPageDeleted={(id) => setKanbanPages((prev) => prev.filter((p) => p.id !== id))}
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg-base)" }}>
 
-      />
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 z-30 md:hidden backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Sidebar */}
+      <div className={`
+        fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 md:z-auto
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      `}>
+        <Sidebar
+          activePage={activePage}
+          onSelectPage={handleSelectPage}
+          refreshTrigger={refreshTrigger}
+          onWorkspaceChange={(id) => setActiveWorkspaceId(id)}
+          onSearchOpen={() => { setSearchOpen(true); setSidebarOpen(false); }}
+          onPageDeleted={(id) => setKanbanPages((prev) => prev.filter((p) => p.id !== id))}
+        />
+      </div>
 
-        {/* Top bar with view toggle */}
-        <div className="flex items-center justify-end px-6 py-2 border-b border-white/5 bg-[#191919] shrink-0">
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Top bar */}
+        <div
+          className="flex items-center justify-between px-4 md:px-6 py-2 shrink-0 border-b"
+          style={{ background: "var(--bg-base)", borderColor: "var(--border)" }}
+        >
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-1.5 rounded-lg transition-all duration-150"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
+          >
+            <Menu size={18} />
+          </button>
+
+          {/* Page title on mobile */}
+          {activePage && (
+            <p className="md:hidden text-sm truncate flex-1 mx-3" style={{ color: "var(--text-secondary)" }}>
+              {activePage.title || "Untitled"}
+            </p>
+          )}
+
+          {/* Spacer on desktop */}
+          <div className="hidden md:block flex-1" />
+
+          {/* View toggle */}
+          <div
+            className="flex items-center gap-0.5 p-1 rounded-lg border"
+            style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
+          >
             <button
               onClick={() => setView("editor")}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                view === "editor"
-                  ? "bg-white/10 text-white"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150"
+              style={{
+                background: view === "editor" ? "var(--bg-hover)" : "transparent",
+                color: view === "editor" ? "var(--text-primary)" : "var(--text-muted)",
+              }}
             >
-              📄 Pages
+              <FileText size={12} />
+              <span className="hidden sm:inline">Pages</span>
             </button>
             <button
-              onClick={() => {
-                setView("kanban");
-                setKanbanPages(allPages);
+              onClick={() => { setView("kanban"); setKanbanPages(allPages); }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150"
+              style={{
+                background: view === "kanban" ? "var(--bg-hover)" : "transparent",
+                color: view === "kanban" ? "var(--text-primary)" : "var(--text-muted)",
               }}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                view === "kanban"
-                  ? "bg-white/10 text-white"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
             >
-              📋 Kanban
+              <Columns size={12} />
+              <span className="hidden sm:inline">Kanban</span>
             </button>
           </div>
         </div>
 
-        {/* Main content */}
+        {/* Content area */}
         {view === "kanban" ? (
-            <KanbanBoard
+          <KanbanBoard
             pages={kanbanPages}
             setPages={setKanbanPages}
             onSelectPage={(page) => {
-                handleSelectPage(page);
-                setView("editor");
+              handleSelectPage(page);
+              setView("editor");
             }}
             workspaceId={activeWorkspaceId}
             onDelete={() => setRefreshTrigger((prev) => prev + 1)}
             onStar={() => setRefreshTrigger((prev) => prev + 1)}
-            />
+          />
         ) : activePage ? (
-          <div className="flex-1 flex flex-col overflow-y-auto bg-[#191919]">
-            <div className="max-w-3xl mx-auto w-full px-12 py-10 flex flex-col flex-1">
+          <div className="flex-1 flex flex-col overflow-y-auto fade-up" style={{ background: "var(--bg-base)" }}>
+            <div className="max-w-3xl mx-auto w-full px-4 sm:px-8 md:px-12 py-6 md:py-12 flex flex-col flex-1">
 
               {/* Cover Image */}
               <CoverImage
@@ -177,18 +226,29 @@ export default function Dashboard() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Untitled"
-                className="text-4xl font-bold text-white bg-transparent border-none outline-none mb-2 placeholder-gray-700 w-full tracking-tight"
+                className="bg-transparent border-none outline-none w-full font-bold text-white placeholder-[#333]"
+                style={{
+                  fontSize: "clamp(1.6rem, 4vw, 2.25rem)",
+                  letterSpacing: "-0.03em",
+                  lineHeight: "1.2",
+                  marginBottom: "12px",
+                  fontFamily: "inherit",
+                }}
               />
 
               {/* Meta row */}
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3 text-gray-600 text-xs">
-                  <span>
-                    {content.replace(/<[^>]+>/g, "").trim().split(/\s+/).filter(Boolean).length} words
+              <div
+                className="flex items-center justify-between pb-4 mb-8 border-b"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-2.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                  <span className="font-mono">
+                    {content.replace(/<[^>]+>/g, "").trim().split(/\s+/).filter(Boolean).length}
+                    <span className="ml-1">words</span>
                   </span>
-                  <span>·</span>
+                  <span style={{ color: "var(--border)" }}>·</span>
                   {saving ? (
-                    <span className="text-gray-500">Saving...</span>
+                    <span style={{ color: "var(--text-muted)" }}>Saving...</span>
                   ) : savedAt ? (
                     <span>Saved {timeAgo(savedAt)}</span>
                   ) : null}
@@ -204,14 +264,21 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-8 bg-[#191919]">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6">
-              <span className="text-3xl">📝</span>
+          /* Empty state */
+          <div
+            className="flex-1 flex flex-col items-center justify-center text-center px-8 fade-up"
+            style={{ background: "var(--bg-base)" }}
+          >
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 border"
+              style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
+            >
+              <FileText size={22} style={{ color: "var(--text-muted)" }} />
             </div>
-            <h2 className="text-white text-xl font-semibold mb-2 tracking-tight">
+            <h2 className="text-white text-base font-semibold mb-2" style={{ letterSpacing: "-0.02em" }}>
               No page selected
             </h2>
-            <p className="text-gray-600 text-sm max-w-xs leading-relaxed">
+            <p className="text-sm leading-relaxed" style={{ color: "var(--text-muted)", maxWidth: "220px" }}>
               Select a page from the sidebar or create a new one to start writing.
             </p>
           </div>

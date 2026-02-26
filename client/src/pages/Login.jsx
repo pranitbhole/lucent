@@ -14,19 +14,18 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await api.post("/auth/login", { email, password });
-      login(res.data.user, res.data.token);
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.message || "Invalid credentials");
-    } finally {
-      setLoading(false);
-    }
-  };
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  try {
+    const res = await api.post("/auth/login", { email, password });
+    login(res.data.user);
+    window.location.href = '/dashboard'; // ← force hard redirect instead of navigate()
+  } catch (err) {
+    setError(err.response?.data?.message || "Invalid email or password.");
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
@@ -34,7 +33,7 @@ export default function Login() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(59,130,246,0.04)_0%,_transparent_60%)]" />
 
       <div className="relative w-full max-w-sm fade-up">
-        {/* Logo mark */}
+        {/* Logo */}
         <div className="flex items-center justify-center mb-8">
           <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -57,13 +56,16 @@ export default function Login() {
         <div className="rounded-2xl border p-6 space-y-4" style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Email</label>
+              <label className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+                Email
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                autoComplete="email"
                 className="w-full px-3 py-2.5 rounded-lg text-sm text-white placeholder-[#444] outline-none transition-all duration-150 border"
                 style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
                 onFocus={e => e.target.style.borderColor = "var(--border-hover)"}
@@ -72,7 +74,9 @@ export default function Login() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Password</label>
+              <label className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+                Password
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -80,6 +84,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
+                  autoComplete="current-password"
                   className="w-full px-3 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-[#444] outline-none transition-all duration-150 border"
                   style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
                   onFocus={e => e.target.style.borderColor = "var(--border-hover)"}
@@ -97,7 +102,10 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="rounded-lg px-3 py-2 text-xs border" style={{ background: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.15)", color: "#f87171" }}>
+              <div
+                className="rounded-lg px-3 py-2 text-xs border"
+                style={{ background: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.15)", color: "#f87171" }}
+              >
                 {error}
               </div>
             )}

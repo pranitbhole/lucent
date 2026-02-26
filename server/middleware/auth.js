@@ -1,17 +1,18 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
 
 module.exports = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  // Read token from httpOnly cookie
+  const token = req.cookies?.token;
 
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+  if (!token)
+    return res.status(401).json({ message: 'Not authenticated. Please log in.' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch (err) {
-    return res.status(403).json({ message: 'Invalid token' });
+    if (err.name === 'TokenExpiredError')
+      return res.status(401).json({ message: 'Session expired. Please log in again.' });
+    return res.status(401).json({ message: 'Invalid session.' });
   }
 };
